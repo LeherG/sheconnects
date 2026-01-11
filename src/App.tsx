@@ -1,6 +1,6 @@
 //WORKS!!!!!!!!
 
-// Updated App.tsx with Purple Theme
+// Complete App.tsx with Purple Theme
 
 "use client";
 
@@ -32,7 +32,7 @@ export default function App() {
       </header>
       <main className="p-8 flex flex-col gap-8 bg-purple-50 dark:bg-purple-950 min-h-screen">
         <Authenticated>
-          {currentPage === "home" && <HomePage />}
+          {currentPage === "home" && <HomePage setCurrentPage={setCurrentPage} />}
           {currentPage === "connections" && <ConnectionsFeature />}
           {currentPage === "community" && <CommunityPage />}
           {currentPage === "profile" && <ProfilePage />}
@@ -79,12 +79,21 @@ function Navigation({
   );
 }
 
-function HomePage() {
+function HomePage({ setCurrentPage }: { setCurrentPage: (page: "home" | "connections" | "community" | "profile") => void }) {
   const { viewer } = useQuery(api.myFunctions.listNumbers, { count: 10 }) ?? {};
+  const posts = useQuery(api.myFunctions.viewPosts);
+  const connections = useQuery(api.connections.getMyConnections);
 
-  if (viewer === undefined) {
+  if (viewer === undefined || posts === undefined || connections === undefined) {
     return <div className="text-center p-8">Loading...</div>;
   }
+
+  // Calculate stats
+  const totalConnections = (connections.mentors?.length || 0) + (connections.mentees?.length || 0);
+  const totalPosts = posts.length;
+  
+  // Calculate interactions (posts + comments for now - you could add more metrics)
+  const totalInteractions = totalPosts;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -96,7 +105,10 @@ function HomePage() {
           <p className="text-purple-700 dark:text-purple-300 mb-4">
             Find mentors or mentees to help you grow in your journey.
           </p>
-          <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
+          <button 
+            onClick={() => setCurrentPage("connections")}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition"
+          >
             Browse Connections
           </button>
         </div>
@@ -106,7 +118,10 @@ function HomePage() {
           <p className="text-purple-700 dark:text-purple-300 mb-4">
             Share your thoughts and connect with the community.
           </p>
-          <button className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition">
+          <button 
+            onClick={() => setCurrentPage("community")}
+            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition"
+          >
             View Posts
           </button>
         </div>
@@ -116,18 +131,52 @@ function HomePage() {
         <h3 className="text-xl font-semibold mb-4 text-purple-900 dark:text-purple-100">Quick Stats</h3>
         <div className="grid grid-cols-3 gap-4 text-center">
           <div>
-            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">0</p>
+            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{totalConnections}</p>
             <p className="text-sm text-purple-600 dark:text-purple-400">Connections</p>
           </div>
           <div>
-            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">0</p>
+            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{totalPosts}</p>
             <p className="text-sm text-purple-600 dark:text-purple-400">Posts</p>
           </div>
           <div>
-            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">0</p>
+            <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{totalInteractions}</p>
             <p className="text-sm text-purple-600 dark:text-purple-400">Interactions</p>
           </div>
         </div>
+      </div>
+
+      {/* Recent Activity Section */}
+      <div className="mt-8 p-6 bg-white dark:bg-purple-900 rounded-xl border border-purple-200 dark:border-purple-800">
+        <h3 className="text-xl font-semibold mb-4 text-purple-900 dark:text-purple-100">Recent Activity</h3>
+        {posts.length === 0 ? (
+          <p className="text-purple-600 dark:text-purple-400 text-center py-4">
+            No recent activity. Start by creating a post or connecting with others!
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {posts.slice(0, 3).map((post) => (
+              <div 
+                key={post.id}
+                className="p-3 bg-purple-50 dark:bg-purple-950 rounded-lg border border-purple-200 dark:border-purple-800 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-900 transition"
+                onClick={() => setCurrentPage("community")}
+              >
+                <h4 className="font-semibold text-purple-900 dark:text-purple-100">{post.title}</h4>
+                <p className="text-sm text-purple-700 dark:text-purple-300 mt-1 line-clamp-2">{post.body}</p>
+                <p className="text-xs text-purple-600 dark:text-purple-400 mt-2">
+                  by {post.authorEmail?.split("@")[0] ?? "Unknown"} • {new Date(post.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            ))}
+            {posts.length > 3 && (
+              <button
+                onClick={() => setCurrentPage("community")}
+                className="w-full text-center text-purple-600 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-200 text-sm font-medium mt-2"
+              >
+                View all posts →
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -217,7 +266,7 @@ function CommunityPage() {
               <div className="flex gap-4">
                 <img
                   src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
-                    post.authorDisplayName ?? post.authorEmail ?? "?"
+                    post.authorEmail ?? "?"
                   )}&background=9333ea&color=fff&size=64`}
                   alt="User avatar"
                   className="w-12 h-12 rounded-full object-cover"
@@ -226,7 +275,7 @@ function CommunityPage() {
                 <div className="flex flex-col w-full">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-purple-700 dark:text-purple-300">
-                      {post.authorDisplayName ?? post.authorEmail ?? "Unknown"}
+                      {post.authorEmail ?? "Unknown"}
                     </span>
                     <span className="text-xs text-purple-600 dark:text-purple-400">
                       @{post.authorEmail?.split("@")[0] ?? "unknown"}
@@ -264,6 +313,7 @@ function CommunityPage() {
     </div>
   );
 }
+
 function CommentSection({ postId }: { postId: string }) {
   const comments = useQuery(api.myFunctions.getComments, {
     postId: postId as any,
@@ -292,8 +342,7 @@ function CommentSection({ postId }: { postId: string }) {
         ))}
       </div>
 
-      {/* Input field at the bottom */}
-      <div className="flex gap-2 mt-auto pt-2">
+      <div className="flex gap-2 mt-2">
         <input
           className="flex-1 text-sm px-2 py-1 rounded border border-purple-300 dark:border-purple-700 bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-100"
           placeholder="Write a comment…"
@@ -357,7 +406,6 @@ function ProfilePage() {
       alert(error.message || "Failed to update profile");
     }
   };
-
 
   if (!profile) {
     return (
@@ -658,4 +706,3 @@ function SignInForm() {
     </div>
   );
 }
-
