@@ -1,60 +1,106 @@
-// src/ConnectionsFeature.tsx
-// Updated version without the Profile Editor tab
-
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { useState } from "react";
 
 export default function ConnectionsFeature() {
   const [activeTab, setActiveTab] = useState("browse");
-  const profile = useQuery(api.connections.getMyProfile);
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
-  // If user hasn't set up profile, prompt them
+  return (
+    <div className="max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6 text-purple-900 dark:text-purple-100">Mentor-Mentee Connections</h1>
+      
+      {!selectedRole ? (
+        <RoleSelector onRoleSelect={setSelectedRole} />
+      ) : (
+        <>
+          <div className="mb-6 flex gap-2 border-b-2 border-purple-200 dark:border-purple-800">
+            <TabButton
+              active={activeTab === "browse"}
+              onClick={() => setActiveTab("browse")}
+            >
+              Browse {selectedRole === "mentor" ? "Mentees" : "Mentors"}
+            </TabButton>
+            <TabButton
+              active={activeTab === "requests"}
+              onClick={() => setActiveTab("requests")}
+            >
+              Requests
+            </TabButton>
+            <TabButton
+              active={activeTab === "connections"}
+              onClick={() => setActiveTab("connections")}
+            >
+              My Connections
+            </TabButton>
+            <TabButton
+              active={activeTab === "profile"}
+              onClick={() => setActiveTab("profile")}
+            >
+              My Profile
+            </TabButton>
+          </div>
+
+          {activeTab === "browse" && (
+            <BrowseUsers lookingFor={selectedRole === "mentor" ? "mentees" : "mentors"} />
+          )}
+          {activeTab === "requests" && <PendingRequests />}
+          {activeTab === "connections" && <MyConnections />}
+          {activeTab === "profile" && <ProfileEditor currentRole={selectedRole} />}
+        </>
+      )}
+    </div>
+  );
+}
+
+function RoleSelector({ onRoleSelect }: { onRoleSelect: (role: string) => void }) {
+  const profile = useQuery(api.connections.getMyProfile);
+  const upsertProfile = useMutation(api.connections.upsertProfile);
+
   if (profile === undefined) {
     return <div className="text-center p-8">Loading...</div>;
   }
 
-  if (!profile) {
-    return (
-      <div className="max-w-md mx-auto mt-16 p-8 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl text-center">
-        <h2 className="text-2xl font-bold mb-4">Set Up Your Profile First</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-6">
-          Before you can browse connections, please set up your profile in the "My Profile" tab.
-        </p>
-      </div>
-    );
+  if (profile) {
+    onRoleSelect(profile.role);
+    return null;
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Mentor-Mentee Connections</h1>
-      
-      <div className="mb-6 flex gap-2 border-b">
-        <TabButton
-          active={activeTab === "browse"}
-          onClick={() => setActiveTab("browse")}
+    <div className="max-w-md mx-auto p-8 bg-white dark:bg-purple-900 rounded-xl border border-purple-200 dark:border-purple-800">
+      <h2 className="text-2xl font-bold mb-4 text-purple-900 dark:text-purple-100">Choose Your Role</h2>
+      <p className="mb-6 text-purple-700 dark:text-purple-300">
+        Are you looking to mentor others, find a mentor, or both?
+      </p>
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => {
+            void upsertProfile({ role: "mentor" });
+            onRoleSelect("mentor");
+          }}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition"
         >
-          Browse {profile.role === "mentor" ? "Mentees" : "Mentors"}
-        </TabButton>
-        <TabButton
-          active={activeTab === "requests"}
-          onClick={() => setActiveTab("requests")}
+          I want to be a Mentor
+        </button>
+        <button
+          onClick={() => {
+            void upsertProfile({ role: "mentee" });
+            onRoleSelect("mentee");
+          }}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition"
         >
-          Requests
-        </TabButton>
-        <TabButton
-          active={activeTab === "connections"}
-          onClick={() => setActiveTab("connections")}
+          I'm looking for a Mentor
+        </button>
+        <button
+          onClick={() => {
+            void upsertProfile({ role: "both" });
+            onRoleSelect("both");
+          }}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition"
         >
-          My Connections
-        </TabButton>
+          Both - I want to mentor and be mentored
+        </button>
       </div>
-
-      {activeTab === "browse" && (
-        <BrowseUsers lookingFor={profile.role === "mentor" ? "mentees" : "mentors"} />
-      )}
-      {activeTab === "requests" && <PendingRequests />}
-      {activeTab === "connections" && <MyConnections />}
     </div>
   );
 }
@@ -63,10 +109,10 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 font-medium transition-colors ${
+      className={`px-4 py-2 font-medium transition-colors rounded-t-lg ${
         active
-          ? "border-b-2 border-blue-500 text-blue-500"
-          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+          ? "border-b-2 border-purple-600 text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900"
+          : "text-purple-600 dark:text-purple-400 hover:bg-purple-100/50 dark:hover:bg-purple-900/50"
       }`}
     >
       {children}
@@ -81,12 +127,12 @@ function BrowseUsers({ lookingFor }: { lookingFor: "mentors" | "mentees" }) {
   const [message, setMessage] = useState("");
 
   if (users === undefined) {
-    return <div className="text-center p-8">Loading users...</div>;
+    return <div className="text-center p-8 text-purple-700 dark:text-purple-300">Loading users...</div>;
   }
 
   if (users.length === 0) {
     return (
-      <div className="text-center p-8 text-slate-600 dark:text-slate-400">
+      <div className="text-center p-8 text-purple-600 dark:text-purple-400">
         No {lookingFor} available right now. Check back later!
       </div>
     );
@@ -108,26 +154,26 @@ function BrowseUsers({ lookingFor }: { lookingFor: "mentors" | "mentees" }) {
       {users.map((user) => (
         <div
           key={user.userId}
-          className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg"
+          className="p-4 bg-white dark:bg-purple-900 rounded-xl border border-purple-200 dark:border-purple-800 hover:shadow-lg transition"
         >
           <div className="flex justify-between items-start mb-2">
             <div>
-              <h3 className="font-bold text-lg">{user.email}</h3>
-              <span className="text-sm text-slate-600 dark:text-slate-400 capitalize">
+              <h3 className="font-bold text-lg text-purple-900 dark:text-purple-100">{user.email}</h3>
+              <span className="text-sm text-purple-600 dark:text-purple-400 capitalize">
                 {user.role}
               </span>
             </div>
             {sendingTo === user.userId ? (
               <button
                 onClick={() => setSendingTo(null)}
-                className="text-sm text-slate-600 hover:text-slate-900"
+                className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-900 dark:hover:text-purple-200"
               >
                 Cancel
               </button>
             ) : (
               <button
                 onClick={() => setSendingTo(user.userId)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded text-sm"
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition"
               >
                 Connect
               </button>
@@ -135,17 +181,17 @@ function BrowseUsers({ lookingFor }: { lookingFor: "mentors" | "mentees" }) {
           </div>
 
           {user.bio && (
-            <p className="text-sm mb-2 text-slate-700 dark:text-slate-300">
+            <p className="text-sm mb-2 text-purple-800 dark:text-purple-200">
               {user.bio}
             </p>
           )}
 
           {user.skills && user.skills.length > 0 && (
             <div className="mb-2">
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              <span className="text-xs font-semibold text-purple-700 dark:text-purple-400">
                 Skills:{" "}
               </span>
-              <span className="text-xs text-slate-700 dark:text-slate-300">
+              <span className="text-xs text-purple-800 dark:text-purple-200">
                 {user.skills.join(", ")}
               </span>
             </div>
@@ -153,27 +199,27 @@ function BrowseUsers({ lookingFor }: { lookingFor: "mentors" | "mentees" }) {
 
           {user.interests && user.interests.length > 0 && (
             <div>
-              <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+              <span className="text-xs font-semibold text-purple-700 dark:text-purple-400">
                 Interests:{" "}
               </span>
-              <span className="text-xs text-slate-700 dark:text-slate-300">
+              <span className="text-xs text-purple-800 dark:text-purple-200">
                 {user.interests.join(", ")}
               </span>
             </div>
           )}
 
           {sendingTo === user.userId && (
-            <div className="mt-4 p-3 bg-white dark:bg-slate-700 rounded">
+            <div className="mt-4 p-3 bg-purple-50 dark:bg-purple-950 rounded-xl border border-purple-200 dark:border-purple-800">
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Add a message (optional)"
-                className="w-full p-2 border rounded text-sm mb-2 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full p-2 border rounded-lg text-sm mb-2 bg-white dark:bg-purple-900 text-purple-900 dark:text-purple-100 border-purple-300 dark:border-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 rows={3}
               />
               <button
                 onClick={() => handleSendRequest(user.userId)}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-sm w-full"
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm w-full transition"
               >
                 Send Request
               </button>
@@ -190,12 +236,12 @@ function PendingRequests() {
   const respond = useMutation(api.connections.respondToRequest);
 
   if (requests === undefined) {
-    return <div className="text-center p-8">Loading requests...</div>;
+    return <div className="text-center p-8 text-purple-700 dark:text-purple-300">Loading requests...</div>;
   }
 
   if (requests.length === 0) {
     return (
-      <div className="text-center p-8 text-slate-600 dark:text-slate-400">
+      <div className="text-center p-8 text-purple-600 dark:text-purple-400">
         No pending requests
       </div>
     );
@@ -215,24 +261,24 @@ function PendingRequests() {
       {requests.map((req) => (
         <div
           key={req.requestId}
-          className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg"
+          className="p-4 bg-white dark:bg-purple-900 rounded-xl border border-purple-200 dark:border-purple-800"
         >
           <div className="mb-2">
-            <h3 className="font-bold text-lg">{req.fromEmail}</h3>
-            <span className="text-sm text-slate-600 dark:text-slate-400 capitalize">
+            <h3 className="font-bold text-lg text-purple-900 dark:text-purple-100">{req.fromEmail}</h3>
+            <span className="text-sm text-purple-600 dark:text-purple-400 capitalize">
               {req.fromRole}
             </span>
           </div>
 
           {req.fromBio && (
-            <p className="text-sm mb-2 text-slate-700 dark:text-slate-300">
+            <p className="text-sm mb-2 text-purple-800 dark:text-purple-200">
               {req.fromBio}
             </p>
           )}
 
           {req.message && (
-            <div className="p-3 bg-blue-50 dark:bg-slate-700 rounded mb-3">
-              <p className="text-sm italic text-slate-700 dark:text-slate-300">
+            <div className="p-3 bg-purple-100 dark:bg-purple-950 rounded-lg mb-3 border border-purple-200 dark:border-purple-800">
+              <p className="text-sm italic text-purple-800 dark:text-purple-200">
                 "{req.message}"
               </p>
             </div>
@@ -241,13 +287,13 @@ function PendingRequests() {
           <div className="flex gap-2">
             <button
               onClick={() => handleRespond(req.requestId, true)}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded flex-1"
+              className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex-1 transition"
             >
               Accept
             </button>
             <button
               onClick={() => handleRespond(req.requestId, false)}
-              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded flex-1"
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg flex-1 transition"
             >
               Decline
             </button>
@@ -262,7 +308,7 @@ function MyConnections() {
   const connections = useQuery(api.connections.getMyConnections);
 
   if (connections === undefined) {
-    return <div className="text-center p-8">Loading connections...</div>;
+    return <div className="text-center p-8 text-purple-700 dark:text-purple-300">Loading connections...</div>;
   }
 
   const { mentors, mentees } = connections;
@@ -271,7 +317,7 @@ function MyConnections() {
     <div className="grid gap-6">
       {mentors.length > 0 && (
         <div>
-          <h2 className="text-xl font-bold mb-4">My Mentors</h2>
+          <h2 className="text-xl font-bold mb-4 text-purple-900 dark:text-purple-100">My Mentors</h2>
           <div className="grid gap-3">
             {mentors.map((mentor) => (
               <ConnectionCard key={mentor.connectionId} user={mentor} />
@@ -282,7 +328,7 @@ function MyConnections() {
 
       {mentees.length > 0 && (
         <div>
-          <h2 className="text-xl font-bold mb-4">My Mentees</h2>
+          <h2 className="text-xl font-bold mb-4 text-purple-900 dark:text-purple-100">My Mentees</h2>
           <div className="grid gap-3">
             {mentees.map((mentee) => (
               <ConnectionCard key={mentee.connectionId} user={mentee} />
@@ -292,7 +338,7 @@ function MyConnections() {
       )}
 
       {mentors.length === 0 && mentees.length === 0 && (
-        <div className="text-center p-8 text-slate-600 dark:text-slate-400">
+        <div className="text-center p-8 text-purple-600 dark:text-purple-400">
           No connections yet. Start browsing to find mentors or mentees!
         </div>
       )}
@@ -302,23 +348,124 @@ function MyConnections() {
 
 function ConnectionCard({ user }: { user: any }) {
   return (
-    <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg">
-      <h3 className="font-bold text-lg mb-1">{user.email}</h3>
+    <div className="p-4 bg-white dark:bg-purple-900 rounded-xl border border-purple-200 dark:border-purple-800">
+      <h3 className="font-bold text-lg mb-1 text-purple-900 dark:text-purple-100">{user.email}</h3>
       {user.bio && (
-        <p className="text-sm text-slate-700 dark:text-slate-300 mb-2">
+        <p className="text-sm text-purple-800 dark:text-purple-200 mb-2">
           {user.bio}
         </p>
       )}
       {user.skills && user.skills.length > 0 && (
-        <div className="text-xs text-slate-600 dark:text-slate-400">
-          Skills: {user.skills.join(", ")}
+        <div className="text-xs text-purple-700 dark:text-purple-300 mb-1">
+          <span className="font-semibold">Skills:</span> {user.skills.join(", ")}
         </div>
       )}
       {user.interests && user.interests.length > 0 && (
-        <div className="text-xs text-slate-600 dark:text-slate-400">
-          Interests: {user.interests.join(", ")}
+        <div className="text-xs text-purple-700 dark:text-purple-300">
+          <span className="font-semibold">Interests:</span> {user.interests.join(", ")}
         </div>
       )}
+    </div>
+  );
+}
+
+function ProfileEditor({ currentRole }: { currentRole: string }) {
+  const profile = useQuery(api.connections.getMyProfile);
+  const upsertProfile = useMutation(api.connections.upsertProfile);
+
+  const [role, setRole] = useState(currentRole);
+  const [bio, setBio] = useState("");
+  const [skillsInput, setSkillsInput] = useState("");
+  const [interestsInput, setInterestsInput] = useState("");
+
+  // Initialize form when profile loads
+  if (profile && bio === "" && profile.bio) {
+    setBio(profile.bio);
+    setSkillsInput(profile.skills?.join(", ") || "");
+    setInterestsInput(profile.interests?.join(", ") || "");
+    setRole(profile.role);
+  }
+
+  const handleSave = async () => {
+    try {
+      await upsertProfile({
+        role: role as "mentor" | "mentee" | "both",
+        bio: bio || undefined,
+        skills: skillsInput
+          ? skillsInput.split(",").map((s) => s.trim()).filter(Boolean)
+          : undefined,
+        interests: interestsInput
+          ? interestsInput.split(",").map((s) => s.trim()).filter(Boolean)
+          : undefined,
+      });
+      alert("Profile updated!");
+    } catch (error: any) {
+      alert(error.message || "Failed to update profile");
+    }
+  };
+
+  return (
+    <div className="max-w-2xl">
+      <h2 className="text-2xl font-bold mb-6 text-purple-900 dark:text-purple-100">Edit Your Profile</h2>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold mb-2 text-purple-900 dark:text-purple-100">Role</label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full p-3 border rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-100 border-purple-300 dark:border-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="mentor">Mentor</option>
+            <option value="mentee">Mentee</option>
+            <option value="both">Both</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-2 text-purple-900 dark:text-purple-100">Bio</label>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            placeholder="Tell others about yourself..."
+            className="w-full p-3 border rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-100 border-purple-300 dark:border-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none"
+            rows={4}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-2 text-purple-900 dark:text-purple-100">
+            Skills (comma-separated)
+          </label>
+          <input
+            type="text"
+            value={skillsInput}
+            onChange={(e) => setSkillsInput(e.target.value)}
+            placeholder="e.g. JavaScript, React, Node.js"
+            className="w-full p-3 border rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-100 border-purple-300 dark:border-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold mb-2 text-purple-900 dark:text-purple-100">
+            Interests (comma-separated)
+          </label>
+          <input
+            type="text"
+            value={interestsInput}
+            onChange={(e) => setInterestsInput(e.target.value)}
+            placeholder="e.g. Web Development, AI, Mobile Apps"
+            className="w-full p-3 border rounded-xl bg-purple-50 dark:bg-purple-950 text-purple-900 dark:text-purple-100 border-purple-300 dark:border-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+
+        <button
+          onClick={handleSave}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl w-full font-semibold transition"
+        >
+          Save Profile
+        </button>
+      </div>
     </div>
   );
 }
