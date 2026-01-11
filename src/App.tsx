@@ -220,7 +220,7 @@ function CommunityPage() {
                 className="w-12 h-12 rounded-full object-cover"
               />
 
-              <div className="flex flex-col w-full">
+              <div className="flex flex-col w-full max-h-[60vh] overflow-y-auto pr-2 min-w-[250px]">
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-indigo-600 dark:text-indigo-300">
                     {post.authorDisplayName ?? post.authorEmail ?? "Unknown"}
@@ -260,7 +260,6 @@ function CommunityPage() {
     </div>
   );
 }
-
 function CommentSection({ postId }: { postId: string }) {
   const comments = useQuery(api.myFunctions.getComments, {
     postId: postId as any,
@@ -273,8 +272,9 @@ function CommentSection({ postId }: { postId: string }) {
   }
 
   return (
-    <div className="mt-3 pl-4 border-l border-slate-200 dark:border-slate-700">
-      <div className="flex flex-col gap-2">
+    <div className="mt-3 pl-4 border-l border-slate-200 dark:border-slate-700 min-w-[250px] flex flex-col">
+      {/* Scrollable comments container with max height */}
+      <div className="flex flex-col gap-2 max-h-[50vh] overflow-y-auto mb-2">
         {comments.length === 0 && (
           <p className="text-sm text-slate-400">No comments yet</p>
         )}
@@ -289,7 +289,8 @@ function CommentSection({ postId }: { postId: string }) {
         ))}
       </div>
 
-      <div className="flex gap-2 mt-2">
+      {/* Input field at the bottom */}
+      <div className="flex gap-2 mt-auto pt-2">
         <input
           className="flex-1 text-sm px-2 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
           placeholder="Write a comment…"
@@ -310,7 +311,6 @@ function CommentSection({ postId }: { postId: string }) {
     </div>
   );
 }
-
 
 function ProfilePage() {
   const profile = useQuery(api.connections.getMyProfile);
