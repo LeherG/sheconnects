@@ -23,7 +23,7 @@ export default function App() {
     <>
       <header className="sticky top-0 z-10 bg-purple-50 dark:bg-purple-950 border-b-2 border-purple-200 dark:border-purple-800">
         <div className="flex items-center justify-between p-4">
-          <h1 className="text-xl font-bold text-purple-900 dark:text-purple-100">SBHacks Proj Name...</h1>
+          <h1 className="text-xl font-bold text-purple-900 dark:text-purple-100">SheConnects</h1>
           <SignOutButton />
         </div>
         <Authenticated>
@@ -488,7 +488,7 @@ function ProfilePage() {
           </button>
         </div>
 
-        <div className="bg-white dark:bg-purple-900 rounded-xl p-6 border border-purple-200 dark:border-purple-800">
+        <div className="bg-white dark:bg-purple-900 rounded-xl p-6 border border-purple-200 dark:border-purple-800 min-w-[400px]">
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold mb-2 text-purple-900 dark:text-purple-100">Role</label>
