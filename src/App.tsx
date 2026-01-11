@@ -356,6 +356,7 @@ function ProfilePage() {
     }
   };
 
+
   // If no profile exists, show setup form
   if (!profile) {
     return (
@@ -658,3 +659,4 @@ function SignInForm() {
     </div>
   );
 }
+
